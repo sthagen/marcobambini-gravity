@@ -325,3 +325,5 @@ binding/GravityObjC/GravityObjC.xcodeproj/project.xcworkspace/xcshareddata/IDEWo
 gravity.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/gravity.xcscheme
 *.xcscheme
 *.xcscheme
+gravity.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/gravity.xcscheme
+*.d

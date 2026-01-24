@@ -293,7 +293,7 @@ void ircode_dump (void *_code) {
         switch (n) {
             case 0: {
                 printf("%05d\t%s\n", line, opcode_name(op));
-            }
+            } break;
 
             case 1: {
                 printf("%05d\t%s %d\n", line, opcode_name(op), p1);

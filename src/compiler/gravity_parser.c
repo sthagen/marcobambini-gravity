@@ -168,6 +168,7 @@ static void report_error (gravity_parser_t *parser, error_type_t error_type, gto
 
     // build error message
     char buffer[1024];
+    buffer[0] = 0;
     va_list arg;
     if (format) {
         va_start (arg, format);

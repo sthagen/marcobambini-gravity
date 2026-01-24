@@ -39,7 +39,7 @@ typedef enum {
 
 // LEXER macros
 #define NEXT                    lexer->buffer[lexer->offset++]; ++lexer->position; INC_COL
-#define PEEK_CURRENT            ((int)lexer->buffer[lexer->offset])
+#define PEEK_CURRENT            ((lexer->offset < lexer->length) ? (int)lexer->buffer[lexer->offset] : 0)
 #define PEEK_NEXT               ((lexer->offset < lexer->length) ? lexer->buffer[lexer->offset+1] : 0)
 #define PEEK_NEXT2              ((lexer->offset+1 < lexer->length) ? lexer->buffer[lexer->offset+2] : 0)
 #define INC_LINE                ++lexer->lineno; RESET_COL
@@ -184,9 +184,9 @@ static inline bool next_utf8(gravity_lexer_t *lexer, int *result) {
 
     switch(len) {
         case 1: break;
-        case 2: INC_OFFSET; INC_TOKBYTES; break;
-        case 3: INC_OFFSET; INC_OFFSET; INC_TOKBYTES; INC_TOKBYTES; break;
-        case 4: INC_OFFSET; INC_OFFSET; INC_OFFSET; INC_TOKBYTES; INC_TOKBYTES; INC_TOKBYTES; INC_POSITION; INC_TOKUTF8LEN; break;
+        case 2: if (IS_EOF) return false; INC_OFFSET; INC_TOKBYTES; break;
+        case 3: if (IS_EOF) return false; INC_OFFSET; if (IS_EOF) return false; INC_OFFSET; INC_TOKBYTES; INC_TOKBYTES; break;
+        case 4: if (IS_EOF) return false; INC_OFFSET; if (IS_EOF) return false; INC_OFFSET; if (IS_EOF) return false; INC_OFFSET; INC_TOKBYTES; INC_TOKBYTES; INC_TOKBYTES; INC_POSITION; INC_TOKUTF8LEN; break;
     }
 
     if (result) *result = c;
@@ -352,11 +352,14 @@ static gtoken_t lexer_scan_string(gravity_lexer_t *lexer) {
         // handle escaped characters
         if (c2 == '\\') {
             INC_OFFSET_POSITION;
-            INC_OFFSET_POSITION;
-            INC_TOKLEN;
             INC_TOKLEN;
 
             // sanity check
+            if (IS_EOF) return lexer_error(lexer, "Unexpected EOF inside a string literal");
+
+            INC_OFFSET_POSITION;
+            INC_TOKLEN;
+
             if (IS_EOF) return lexer_error(lexer, "Unexpected EOF inside a string literal");
             continue;
         }

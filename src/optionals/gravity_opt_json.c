@@ -133,8 +133,10 @@ static bool JSON_parse (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, u
     gravity_string_t *string = VALUE_AS_STRING(value);
     json_value *json = json_parse(string->s, string->len);
     if (!json) RETURN_VALUE(VALUE_FROM_NULL, rindex);
-    
-    RETURN_VALUE(JSON_value(vm, json), rindex);
+
+    gravity_value_t result = JSON_value(vm, json);
+    json_value_free(json);
+    RETURN_VALUE(result, rindex);
 }
 
 //static bool JSON_begin_object (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {

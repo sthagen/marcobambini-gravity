@@ -2053,6 +2053,10 @@ gravity_closure_t *gravity_vm_loadbuffer (gravity_vm *vm, const char *buffer, si
     void_r objects;
     marray_init(objects);
 
+    void *saved = vm->data;
+    void_r stack;
+    marray_init(stack);
+
     // start json parsing
     json_value *json = json_parse (buffer, len);
     if (!json) goto abort_load;
@@ -2096,12 +2100,9 @@ gravity_closure_t *gravity_vm_loadbuffer (gravity_vm *vm, const char *buffer, si
 
     // fix superclass(es)
     size_t count = marray_size(objects);
-    if (count) {
-        void *saved = vm->data;
 
+    if (count) {
         // prepare stack to help resolve nested super classes
-        void_r stack;
-        marray_init(stack);
         vm->data = (void *)&stack;
 
         // loop of each processed object
@@ -2122,7 +2123,9 @@ abort_load:
     report_runtime_error(vm, GRAVITY_ERROR_RUNTIME, "%s", "Unable to parse JSON executable file.");
 
 abort_super:
+    marray_destroy(stack);
     marray_destroy(objects);
+    vm->data = saved;
     if (json) json_value_free(json);
     gravity_gc_setenabled(vm, true);
     return NULL;

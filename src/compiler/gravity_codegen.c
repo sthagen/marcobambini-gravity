@@ -77,6 +77,7 @@ static void report_error (gvisitor_t *self, gnode_t *node, const char *format, .
 
     // build error message
     char buffer[1024];
+    buffer[0] = 0;
     va_list arg;
     if (format) {
         va_start (arg, format);
@@ -2142,6 +2143,7 @@ gravity_function_t *gravity_codegen(gnode_t *node, gravity_delegate_t *delegate,
     marray_pop(data.context);
     assert(marray_size(data.context) == 0);
     marray_destroy(data.context);
+    marray_destroy(data.superfix);
 
     // in case of codegen errors explicity free code and return NULL
     if (visitor.nerr != 0) {ircode_free(code); f->bytecode = NULL;}

@@ -2487,7 +2487,11 @@ static bool string_repeat (gravity_vm *vm, gravity_value_t *args, uint16_t nargs
     }
 
     // figure out the size of the array we need to make to hold the new string
-    uint32_t new_size = (uint32_t)(main_str->len * times_to_repeat);
+    uint64_t computed_size = (uint64_t)main_str->len * (uint64_t)times_to_repeat;
+    if (computed_size > UINT32_MAX) {
+        RETURN_ERROR("String.repeat() would exceed maximum string size");
+    }
+    uint32_t new_size = (uint32_t)computed_size;
     char *new_str = mem_alloc(vm, new_size+1);
     CHECK_MEM_ALLOC(new_str);
 

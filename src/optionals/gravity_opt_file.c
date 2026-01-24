@@ -56,7 +56,7 @@ static gravity_file_t *gravity_ifile_new (gravity_vm *vm, FILE *f) {
 
 static bool internal_file_size (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 1 parameter of type string is required
-    if (nargs != 2 && !VALUE_ISA_STRING(args[1])) {
+    if (nargs != 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("A path parameter of type String is required.");
     }
     
@@ -67,7 +67,7 @@ static bool internal_file_size (gravity_vm *vm, gravity_value_t *args, uint16_t 
 
 static bool internal_file_exists (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 1 parameter of type string is required
-    if (nargs != 2 && !VALUE_ISA_STRING(args[1])) {
+    if (nargs != 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("A path parameter of type String is required.");
     }
     
@@ -78,7 +78,7 @@ static bool internal_file_exists (gravity_vm *vm, gravity_value_t *args, uint16_
 
 static bool internal_file_delete (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 1 parameter of type string is required
-    if (nargs != 2 && !VALUE_ISA_STRING(args[1])) {
+    if (nargs != 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("A path parameter of type String is required.");
     }
     
@@ -89,7 +89,7 @@ static bool internal_file_delete (gravity_vm *vm, gravity_value_t *args, uint16_
 
 static bool internal_file_read (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 1 parameter of type string is required
-    if (nargs != 2 && !VALUE_ISA_STRING(args[1])) {
+    if (nargs != 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("A path parameter of type String is required.");
     }
     
@@ -106,7 +106,7 @@ static bool internal_file_read (gravity_vm *vm, gravity_value_t *args, uint16_t 
 
 static bool internal_file_write (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 2 parameters of type string are required
-    if (nargs != 3 && !VALUE_ISA_STRING(args[1]) && !VALUE_ISA_STRING(args[2])) {
+    if (nargs != 3 || !VALUE_ISA_STRING(args[1]) || !VALUE_ISA_STRING(args[2])) {
         RETURN_ERROR("A path parameter of type String and a String parameter are required.");
     }
     
@@ -119,7 +119,7 @@ static bool internal_file_write (gravity_vm *vm, gravity_value_t *args, uint16_t
 
 static bool internal_file_buildpath (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 2 parameters of type string are required
-    if (nargs != 3 && !VALUE_ISA_STRING(args[1]) && !VALUE_ISA_STRING(args[2])) {
+    if (nargs != 3 || !VALUE_ISA_STRING(args[1]) || !VALUE_ISA_STRING(args[2])) {
         RETURN_ERROR("A file and path parameters of type String are required.");
     }
     
@@ -137,7 +137,7 @@ static bool internal_file_buildpath (gravity_vm *vm, gravity_value_t *args, uint
 
 static bool internal_file_is_directory (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 1 parameter of type string is required
-    if (nargs != 2 && !VALUE_ISA_STRING(args[1])) {
+    if (nargs != 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("A path parameter of type String is required.");
     }
     
@@ -148,7 +148,7 @@ static bool internal_file_is_directory (gravity_vm *vm, gravity_value_t *args, u
 
 static bool internal_file_directory_create (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // 1 parameter of type string is required
-    if (nargs != 2 && !VALUE_ISA_STRING(args[1])) {
+    if (nargs != 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("A path parameter of type String is required.");
     }
     
@@ -218,12 +218,12 @@ static bool internal_file_directory_scan (gravity_vm *vm, gravity_value_t *args,
     // optional bool 2nd parameter
     int nindex = 2;
     bool recursive = true;
-    if (VALUE_ISA_BOOL(args[2])) {
+    if (nargs > 2 && VALUE_ISA_BOOL(args[2])) {
         recursive = VALUE_AS_BOOL(args[2]);
         nindex = 3;
     }
-    
-    if (!VALUE_ISA_CLOSURE(args[nindex])) {
+
+    if (nargs <= (uint16_t)nindex || !VALUE_ISA_CLOSURE(args[nindex])) {
         RETURN_ERROR("A closure parameter is required.");
     }
     
@@ -280,7 +280,7 @@ static bool internal_file_iread (gravity_vm *vm, gravity_value_t *args, uint16_t
     // var data = file.read(N)
     
     // 1 parameter of type int is required
-    if (nargs < 1 && (!VALUE_ISA_INT(args[1]) && !VALUE_ISA_STRING(args[1]))) {
+    if (nargs < 2 || (!VALUE_ISA_INT(args[1]) && !VALUE_ISA_STRING(args[1]))) {
         RETURN_ERROR("A parameter of type Int or String is required.");
     }
     
@@ -344,8 +344,8 @@ static bool internal_file_iread (gravity_vm *vm, gravity_value_t *args, uint16_t
 static bool internal_file_iwrite (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
     // var written = file.write(data)
     
-    // 1 parameter of type int is required
-    if (nargs < 1 && !VALUE_ISA_STRING(args[1])) {
+    // 1 parameter of type string is required
+    if (nargs < 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("A parameter of type String is required.");
     }
     
@@ -360,7 +360,7 @@ static bool internal_file_iseek (gravity_vm *vm, gravity_value_t *args, uint16_t
     // var result = file.seek(offset, whence)
     
     // 2 parameters of type int are required
-    if (nargs != 3 && !VALUE_ISA_INT(args[1]) && !VALUE_ISA_INT(args[2])) {
+    if (nargs != 3 || !VALUE_ISA_INT(args[1]) || !VALUE_ISA_INT(args[2])) {
         RETURN_ERROR("An offset parameter of type Int and a whence parameter of type Int are required.");
     }
     

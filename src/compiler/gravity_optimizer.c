@@ -20,8 +20,8 @@
 #define IS_NEG(inst)                ((inst) && (inst->op == NEG))
 #define IS_NUM(inst)                ((inst) && (inst->op == LOADI))
 #define IS_MATH(inst)               ((inst) && (inst->op >= ADD) && (inst->op <= REM))
-#define IS_SKIP(inst)               (inst->tag == SKIP_TAG)
-#define IS_LABEL(inst)              (inst->tag == LABEL_TAG)
+#define IS_SKIP(inst)               ((inst) && (inst->tag == SKIP_TAG))
+#define IS_LABEL(inst)              ((inst) && (inst->tag == LABEL_TAG))
 #define IS_NOTNULL(inst)            (inst)
 #define IS_PRAGMA_MOVE_OPT(inst)    ((inst) && (inst->tag == PRAGMA_MOVE_OPTIMIZATION))
 
@@ -325,15 +325,23 @@ static bool optimize_const_instruction (inst_t *inst, inst_t *inst1, inst_t *ins
 
         case DIV:
             // don't optimize in case of division by 0
-            if ((int64_t)d2 == 0) return false;
-            if (type == DOUBLE_TAG) d = d1 / d2;
-            else n = n1 / n2;
+            if (type == DOUBLE_TAG) {
+                if (d2 == 0.0) return false;
+                d = d1 / d2;
+            } else {
+                if (n2 == 0) return false;
+                n = n1 / n2;
+            }
             break;
 
         case REM:
-            if ((int64_t)d2 == 0) return false;
-            if (type == DOUBLE_TAG) d = (double)((int64_t)d1 % (int64_t)d2);
-            else n = n1 % n2;
+            if (type == DOUBLE_TAG) {
+                if (d2 == 0.0) return false;
+                d = (double)((int64_t)d1 % (int64_t)d2);
+            } else {
+                if (n2 == 0) return false;
+                n = n1 % n2;
+            }
             break;
 
         default:

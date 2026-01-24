@@ -35,9 +35,7 @@ static gravity_list_t               *argv = NULL;
  *
  */
 static bool gravity_env_get(gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
-    #pragma unused(nargs)
-    
-    if(!VALUE_ISA_STRING(args[1])) {
+    if(nargs < 2 || !VALUE_ISA_STRING(args[1])) {
         RETURN_ERROR("Environment variable key must be a string.");
     }
 
@@ -63,9 +61,7 @@ static bool gravity_env_get(gravity_vm *vm, gravity_value_t *args, uint16_t narg
  * @retval  Weather this function was successful or not.
  */
 static bool gravity_env_set(gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
-    #pragma unused(nargs)
-    
-    if(!VALUE_ISA_STRING(args[1]) || (!VALUE_ISA_STRING(args[2]) && !VALUE_ISA_NULL(args[2]))) {
+    if(nargs < 2 || !VALUE_ISA_STRING(args[1]) || (!VALUE_ISA_STRING(args[2]) && !VALUE_ISA_NULL(args[2]))) {
         RETURN_ERROR("Environment variable key and value must both be strings.");
     }
 

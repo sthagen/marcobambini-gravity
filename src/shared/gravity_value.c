@@ -121,11 +121,14 @@ gravity_class_t *gravity_class_getsuper (gravity_class_t *c) {
 }
 
 bool gravity_class_grow (gravity_class_t *c, uint32_t n) {
-    if (c->ivars) mem_free(c->ivars);
     if (c->nivars + n >= MAX_IVARS) return false;
-    c->nivars += n;
-    c->ivars = (gravity_value_t *)mem_alloc(NULL, c->nivars * sizeof(gravity_value_t));
-    for (uint32_t i=0; i<c->nivars; ++i) c->ivars[i] = VALUE_FROM_NULL;
+    uint32_t new_nivars = c->nivars + n;
+    gravity_value_t *new_ivars = (gravity_value_t *)mem_alloc(NULL, new_nivars * sizeof(gravity_value_t));
+    if (!new_ivars) return false;
+    for (uint32_t i=0; i<new_nivars; ++i) new_ivars[i] = VALUE_FROM_NULL;
+    if (c->ivars) mem_free(c->ivars);
+    c->ivars = new_ivars;
+    c->nivars = new_nivars;
     return true;
 }
 
@@ -158,6 +161,8 @@ gravity_class_t *gravity_class_new_single (gravity_vm *vm, const char *identifie
     c->identifier = string_dup(identifier);
     c->superclass = NULL;
     c->nivars = nivar;
+    marray_init(c->inames);
+    
     c->htable = gravity_hash_create(0, gravity_value_hash, gravity_value_equals, gravity_hash_keyfree, NULL);
     if (nivar) {
         c->ivars = (gravity_value_t *)mem_alloc(NULL, nivar * sizeof(gravity_value_t));
@@ -209,13 +214,45 @@ uint32_t gravity_class_count_ivars (gravity_class_t *c) {
 }
 
 int16_t gravity_class_add_ivar (gravity_class_t *c, const char *identifier) {
-    #pragma unused(identifier)
-    // TODO: add identifier in array (for easier debugging)
+    marray_push(gravity_value_t, c->inames, (identifier) ? VALUE_FROM_CSTRING(NULL, identifier) : VALUE_FROM_NULL);
     ++c->nivars;
     return c->nivars-1; // its a C array so index is 0 based
 }
 
+int16_t gravity_class_ivar_index (gravity_class_t *c, const char *identifier) {
+    // -1 means NOT FOUND
+    if (!identifier) return -1;
+    
+    size_t n = marray_size(c->inames);
+    for (size_t i=0; i<n; i++) {
+        gravity_value_t v = marray_get(c->inames, i);
+        if (VALUE_ISA_STRING(v)) {
+            const char *name = VALUE_AS_CSTRING(v);
+            if (string_cmp(identifier, name) == 0) return (int16_t)i;
+        }
+    }
+    return -1;
+}
+
+static void gravity_class_dump_ivars(gravity_class_t *c) {
+    size_t n = marray_size(c->inames);
+    for (size_t i=0; i<n; i++) {
+        gravity_value_t v = marray_get(c->inames, i);
+        if (VALUE_ISA_NULL(v)) {
+            printf("%05zu\tNULL\n", i);
+            continue;
+        }
+        if (VALUE_ISA_STRING(v)) {
+            printf("%05zu\tSTRING: %s\n", i, VALUE_AS_CSTRING(v));
+            continue;
+        }
+        // SHOULD NEVER REACH THIS POINT
+        printf("ivar type error in ivar %zu\n", i);
+    }
+}
+
 void gravity_class_dump (gravity_class_t *c) {
+    gravity_class_dump_ivars(c);
     gravity_hash_dump(c->htable);
 }
 
@@ -243,6 +280,18 @@ void gravity_class_serialize (gravity_class_t *c, json_t *json) {
     // number of instance (and static) variables
     json_add_int(json, GRAVITY_JSON_LABELNIVAR, c->nivars);
     if ((c != meta) && (meta->nivars > 0)) json_add_int(json, GRAVITY_JSON_LABELSIVAR, meta->nivars);
+    
+    // ivar names
+    size_t n = marray_size(c->inames);
+    if (n > 0) {
+        json_begin_array(json, GRAVITY_JSON_LABELINAMES);
+        for (size_t i=0; i<n; i++) {
+            gravity_value_t v = marray_get(c->inames, i);
+            if (VALUE_ISA_STRING(v)) json_add_cstring(json, NULL, VALUE_AS_CSTRING(v));
+            else json_add_null(json, NULL);
+        }
+        json_end_array(json);
+    }
 
     // struct flag
     if (c->is_struct) json_add_bool(json, GRAVITY_JSON_LABELSTRUCT, true);
@@ -315,6 +364,18 @@ gravity_class_t *gravity_class_deserialize (gravity_vm *vm, json_value *json) {
                 gravity_class_grow(meta, (uint32_t)value->u.integer);
                 continue;
             }
+            
+            // inames
+            if (string_casencmp(key, GRAVITY_JSON_LABELINAMES, strlen(key)) == 0) {
+                uint32_t m = value->u.array.length;
+                for (uint32_t j=0; j<m; ++j) {
+                    json_value *r = value->u.array.values[j];
+                    gravity_object_t *obj = NULL;
+                    if (r->type == json_string) obj = gravity_object_deserialize(NULL, r);
+                    marray_push(gravity_value_t, c->inames, (obj) ? VALUE_FROM_OBJECT(obj) : VALUE_FROM_NULL);
+                }
+                continue;
+            }
 
             // struct
             if (string_casencmp(key, GRAVITY_JSON_LABELSTRUCT, strlen(key)) == 0) {
@@ -373,6 +434,7 @@ static void gravity_class_free_internal (gravity_vm *vm, gravity_class_t *c, boo
 
     if (c->identifier) mem_free((void *)c->identifier);
     if (c->superlook) mem_free((void *)c->superlook);
+    marray_destroy(c->inames);
     
     if (!skip_base) {
         // base classes have functions not registered inside VM so manually free all of them

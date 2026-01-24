@@ -223,6 +223,11 @@ static bool math_xrt (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uin
         RETURN_VALUE(VALUE_FROM_INT(0), rindex);
     }
 
+    // check for division by zero in 1.0/base
+    if ((VALUE_ISA_INT(base) && base.n == 0) || (VALUE_ISA_FLOAT(base) && base.f == 0.0)) {
+        RETURN_VALUE(VALUE_FROM_UNDEFINED, rindex);
+    }
+
     if (VALUE_ISA_INT(value) && VALUE_ISA_INT(base)) {
         gravity_float_t computed_value = (gravity_float_t)pow((gravity_float_t)value.n, 1.0/base.n);
         RETURN_VALUE(VALUE_FROM_FLOAT(computed_value), rindex);
@@ -238,7 +243,7 @@ static bool math_xrt (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uin
         RETURN_VALUE(VALUE_FROM_FLOAT(computed_value), rindex);
     }
 
-    if (VALUE_ISA_FLOAT(value) && VALUE_ISA_INT(base)) {
+    if (VALUE_ISA_FLOAT(value) && VALUE_ISA_FLOAT(base)) {
         gravity_float_t computed_value = (gravity_float_t)pow((gravity_float_t)value.f, 1.0/base.f);
         RETURN_VALUE(VALUE_FROM_FLOAT(computed_value), rindex);
     }
@@ -340,16 +345,14 @@ static bool math_floor (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, u
 }
 
 static int gcf(int x, int y) {
-    if (x == 0) {
-        return y;
-    }
+    if (x < 0) x = -x;
+    if (y < 0) y = -y;
+    if (x == 0) return y;
+    if (y == 0) return x;
     while (y != 0) {
-        if (x > y) {
-            x = x - y;
-        }
-        else {
-            y = y - x;
-        }
+        int t = y;
+        y = x % y;
+        x = t;
     }
     return x;
 }
@@ -372,7 +375,8 @@ static bool math_gcf (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uin
 }
 
 static int lcm(int x, int y) {
-    return x*y/gcf(x,y);
+    if (x == 0 || y == 0) return 0;
+    return (x / gcf(x, y)) * y;
 }
 
 static bool math_lcm (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
